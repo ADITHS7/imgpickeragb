@@ -1,9 +1,8 @@
-// viewmodels/user_view_model.dart
+// viewmodel/user_viewmodel.dart
 import 'package:flutter/material.dart';
-import 'package:imgpickapp/model/user_model.dart';
 import 'package:imgpickapp/services/image_services.dart';
 import 'dart:io';
-
+import '../model/user_model.dart';
 import '../services/user_service.dart';
 
 class UserViewModel extends ChangeNotifier {
@@ -19,6 +18,8 @@ class UserViewModel extends ChangeNotifier {
   bool _isLoading = false;
   String _errorMessage = '';
   String _searchQuery = '';
+  bool _isApiConnected = false;
+  bool _isInitialized = false;
 
   // Controllers
   final TextEditingController searchController = TextEditingController();
@@ -37,20 +38,59 @@ class UserViewModel extends ChangeNotifier {
       _users.isNotEmpty && _currentUserIndex < _users.length - 1;
   bool get canGoPrevious => _users.isNotEmpty && _currentUserIndex > 0;
   int get totalUsers => _users.length;
+  bool get isApiConnected => _isApiConnected;
+  bool get isInitialized => _isInitialized;
 
   UserViewModel() {
     _initializeUsers();
   }
 
-  void _initializeUsers() {
-    _users = _userService.getAllUsers();
-    _filteredUsers = List.from(_users);
-    if (_users.isNotEmpty) {
-      _selectedUser = _users[0];
-      nameController.text = _selectedUser!.name;
-      _loadUserImage();
+  Future<void> _initializeUsers() async {
+    if (_isInitialized) return;
+
+    _setLoading(true);
+    try {
+      // Check API connection first
+      final healthCheck = await _userService.checkApiHealth();
+      _isApiConnected = healthCheck['success'] == true;
+
+      if (!_isApiConnected) {
+        _setError(
+          'API server is not available. Please check your connection and try again.',
+        );
+        _setLoading(false);
+        notifyListeners();
+        return;
+      }
+
+      // Load users from API
+      await _loadUsersFromApi();
+
+      // Select first user if available
+      if (_users.isNotEmpty) {
+        await _selectUserByIndex(0);
+      } else {
+        _setError('No societies found in the database.');
+      }
+
+      _isInitialized = true;
+      _clearError();
+    } catch (e) {
+      _setError('Failed to initialize: ${e.toString()}');
+      print('Initialization error: $e');
+    } finally {
+      _setLoading(false);
     }
-    notifyListeners();
+  }
+
+  Future<void> _loadUsersFromApi() async {
+    try {
+      _users = await _userService.getAllUsers();
+      _filteredUsers = List.from(_users);
+      notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to load societies: ${e.toString()}');
+    }
   }
 
   void _setLoading(bool loading) {
@@ -68,30 +108,82 @@ class UserViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void filterUsers(String query) {
+  // Filter users by search query with API integration
+  Future<void> filterUsers(String query) async {
     _searchQuery = query;
-    searchController.text = query;
-    _filteredUsers = _userService.searchUsers(query);
-    notifyListeners();
-  }
 
-  void selectUser(User user) {
-    _selectedUser = user;
-    _currentUserIndex = _users.indexOf(user);
-    nameController.text = user.name;
-    _loadUserImage();
-    _clearError();
-    notifyListeners();
-  }
+    if (!_isApiConnected) {
+      _setError('API connection required for search');
+      return;
+    }
 
-  void _loadUserImage() {
-    if (_selectedUser?.imagePath != null) {
-      _selectedImage = File(_selectedUser!.imagePath!);
-    } else {
-      _selectedImage = null;
+    try {
+      _setLoading(true);
+      _clearError();
+
+      if (query.trim().isEmpty) {
+        _filteredUsers = List.from(_users);
+      } else {
+        _filteredUsers = await _userService.searchUsers(query);
+      }
+
+      notifyListeners();
+    } catch (e) {
+      _setError('Search failed: ${e.toString()}');
+      _filteredUsers = [];
+      notifyListeners();
+    } finally {
+      _setLoading(false);
     }
   }
 
+  // Select user and load details from API
+  Future<void> selectUser(User user) async {
+    try {
+      _setLoading(true);
+      _clearError();
+
+      // Find index in full users list
+      _currentUserIndex = _users.indexWhere((u) => u.soccode == user.soccode);
+      if (_currentUserIndex == -1) _currentUserIndex = 0;
+
+      // Load fresh user details from API
+      final updatedUser = await _userService.getUserBySoccode(user.soccode);
+      if (updatedUser != null) {
+        _selectedUser = updatedUser;
+        nameController.text = _selectedUser!.societyname;
+        _loadUserImage();
+      } else {
+        _setError('Failed to load society details');
+      }
+    } catch (e) {
+      _setError('Failed to select society: ${e.toString()}');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> _selectUserByIndex(int index) async {
+    if (index >= 0 && index < _users.length) {
+      await selectUser(_users[index]);
+    }
+  }
+
+  void _loadUserImage() {
+    // Clear any locally selected image when loading user
+    _selectedImage = null;
+    notifyListeners();
+  }
+
+  // Get image URL for network loading
+  String? getImageUrl() {
+    if (_selectedUser != null && _selectedUser!.hasImage) {
+      return _userService.getImageUrl(_selectedUser!.soccode);
+    }
+    return null;
+  }
+
+  // Pick image from gallery
   Future<void> pickImageFromGallery() async {
     try {
       _setLoading(true);
@@ -109,6 +201,7 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
+  // Take photo from camera
   Future<void> takePhotoFromCamera() async {
     try {
       _setLoading(true);
@@ -126,14 +219,20 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
+  // Update user image via API
   Future<bool> updateUserImage() async {
     if (_selectedUser == null) {
-      _setError('No user selected');
+      _setError('No society selected');
       return false;
     }
 
     if (_selectedImage == null) {
-      _setError('No image selected to update');
+      _setError('No image selected to upload');
+      return false;
+    }
+
+    if (!_isApiConnected) {
+      _setError('API connection required for upload');
       return false;
     }
 
@@ -141,98 +240,227 @@ class UserViewModel extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      final updatedUser = _selectedUser!.copyWith(
-        imagePath: _selectedImage?.path,
+      // Upload image via API
+      final result = await _userService.uploadImage(
+        _selectedUser!.soccode,
+        _selectedImage!,
       );
 
-      final success = _userService.updateUser(updatedUser);
-      if (success) {
-        _selectedUser = updatedUser;
-        _users = _userService.getAllUsers();
-        _filteredUsers = _userService.searchUsers(_searchQuery);
+      if (result['success'] == true) {
+        // Refresh user data from API to get updated status
+        final updatedUser = await _userService.refreshUser(
+          _selectedUser!.soccode,
+        );
+        if (updatedUser != null) {
+          _selectedUser = updatedUser;
+
+          // Update in users list
+          final index = _users.indexWhere(
+            (u) => u.soccode == _selectedUser!.soccode,
+          );
+          if (index != -1) {
+            _users[index] = updatedUser;
+          }
+
+          // Update filtered list
+          final filteredIndex = _filteredUsers.indexWhere(
+            (u) => u.soccode == _selectedUser!.soccode,
+          );
+          if (filteredIndex != -1) {
+            _filteredUsers[filteredIndex] = updatedUser;
+          }
+        }
+
+        // Clear selected image after successful upload
+        _selectedImage = null;
         notifyListeners();
         return true;
       } else {
-        _setError('Failed to update user image');
+        _setError(result['error'] ?? 'Failed to upload image to server');
         return false;
       }
     } catch (e) {
-      _setError('Error updating user image: ${e.toString()}');
+      _setError('Error uploading image: ${e.toString()}');
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
+  // Delete user image via API
   Future<bool> deleteUserImage() async {
     if (_selectedUser == null) {
-      _setError('No user selected');
+      _setError('No society selected');
       return false;
     }
 
-    if (_selectedUser!.imagePath == null) {
+    if (!_selectedUser!.hasImage) {
       _setError('No image to delete');
       return false;
     }
 
+    if (!_isApiConnected) {
+      _setError('API connection required for delete operation');
+      return false;
+    }
+
     try {
       _setLoading(true);
       _clearError();
 
-      // Delete the image file if it exists
-      if (_selectedUser!.imagePath != null) {
-        final imageFile = File(_selectedUser!.imagePath!);
-        if (await imageFile.exists()) {
-          try {
-            await imageFile.delete();
-          } catch (e) {
-            // Continue even if file deletion fails
+      // Delete image via API
+      final result = await _userService.deleteImage(_selectedUser!.soccode);
+
+      if (result['success'] == true) {
+        // Refresh user data from API to get updated status
+        final updatedUser = await _userService.refreshUser(
+          _selectedUser!.soccode,
+        );
+        if (updatedUser != null) {
+          _selectedUser = updatedUser;
+
+          // Update in users list
+          final index = _users.indexWhere(
+            (u) => u.soccode == _selectedUser!.soccode,
+          );
+          if (index != -1) {
+            _users[index] = updatedUser;
+          }
+
+          // Update filtered list
+          final filteredIndex = _filteredUsers.indexWhere(
+            (u) => u.soccode == _selectedUser!.soccode,
+          );
+          if (filteredIndex != -1) {
+            _filteredUsers[filteredIndex] = updatedUser;
           }
         }
-      }
 
-      final updatedUser = _selectedUser!.copyWith(imagePath: null);
-
-      final success = _userService.updateUser(updatedUser);
-      if (success) {
-        _selectedUser = updatedUser;
         _selectedImage = null;
-        _users = _userService.getAllUsers();
-        _filteredUsers = _userService.searchUsers(_searchQuery);
         notifyListeners();
         return true;
       } else {
-        _setError('Failed to delete user image');
+        _setError(result['error'] ?? 'Failed to delete image from server');
         return false;
       }
     } catch (e) {
-      _setError('Error deleting user image: ${e.toString()}');
+      _setError('Error deleting image: ${e.toString()}');
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  void nextUser() {
+  // Navigation methods
+  Future<void> nextUser() async {
     if (canGoNext) {
-      _currentUserIndex++;
-      _selectedUser = _users[_currentUserIndex];
-      nameController.text = _selectedUser!.name;
-      _loadUserImage();
+      await _selectUserByIndex(_currentUserIndex + 1);
+    }
+  }
+
+  Future<void> previousUser() async {
+    if (canGoPrevious) {
+      await _selectUserByIndex(_currentUserIndex - 1);
+    }
+  }
+
+  // Refresh all data from API
+  Future<void> refreshData() async {
+    try {
+      _setLoading(true);
       _clearError();
+
+      // Check API connection
+      final healthCheck = await _userService.checkApiHealth();
+      _isApiConnected = healthCheck['success'] == true;
+
+      if (!_isApiConnected) {
+        _setError('API server is not available. Please check your connection.');
+        return;
+      }
+
+      // Clear cache and reload data
+      _userService.clearCache();
+      await _loadUsersFromApi();
+
+      // Refresh current user if selected
+      if (_selectedUser != null) {
+        await selectUser(_selectedUser!);
+      } else if (_users.isNotEmpty) {
+        await _selectUserByIndex(0);
+      }
+
+      _clearError();
+    } catch (e) {
+      _setError('Failed to refresh data: ${e.toString()}');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Get upload statistics from API
+  Future<Map<String, dynamic>?> getUploadStats() async {
+    if (!_isApiConnected) {
+      _setError('API connection required for statistics');
+      return null;
+    }
+
+    try {
+      final stats = await _userService.getStats();
+      if (stats['success'] == true) {
+        return stats['data'];
+      } else {
+        _setError(stats['error'] ?? 'Failed to get statistics');
+        return null;
+      }
+    } catch (e) {
+      _setError('Failed to get statistics: ${e.toString()}');
+      return null;
+    }
+  }
+
+  // Check API connection status
+  Future<void> checkApiConnection() async {
+    try {
+      final healthCheck = await _userService.checkApiHealth();
+      _isApiConnected = healthCheck['success'] == true;
+      if (_isApiConnected) {
+        _clearError();
+      } else {
+        _setError('API server is not reachable');
+      }
+      notifyListeners();
+    } catch (e) {
+      _isApiConnected = false;
+      _setError('Failed to check API connection: ${e.toString()}');
       notifyListeners();
     }
   }
 
-  void previousUser() {
-    if (canGoPrevious) {
-      _currentUserIndex--;
-      _selectedUser = _users[_currentUserIndex];
-      nameController.text = _selectedUser!.name;
-      _loadUserImage();
-      _clearError();
-      notifyListeners();
-    }
+  // Reset to initial state
+  void reset() {
+    _users.clear();
+    _filteredUsers.clear();
+    _selectedUser = null;
+    _selectedImage = null;
+    _currentUserIndex = 0;
+    _isLoading = false;
+    _errorMessage = '';
+    _searchQuery = '';
+    _isApiConnected = false;
+    _isInitialized = false;
+
+    searchController.clear();
+    nameController.clear();
+
+    notifyListeners();
+  }
+
+  // Retry initialization if it failed
+  Future<void> retryInitialization() async {
+    _isInitialized = false;
+    reset();
+    await _initializeUsers();
   }
 
   @override
