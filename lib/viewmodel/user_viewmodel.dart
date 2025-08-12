@@ -126,9 +126,14 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> updateUser() async {
-    if (_selectedUser == null || nameController.text.trim().isEmpty) {
-      _setError('Please enter a valid name');
+  Future<bool> updateUserImage() async {
+    if (_selectedUser == null) {
+      _setError('No user selected');
+      return false;
+    }
+
+    if (_selectedImage == null) {
+      _setError('No image selected to update');
       return false;
     }
 
@@ -137,7 +142,6 @@ class UserViewModel extends ChangeNotifier {
       _clearError();
 
       final updatedUser = _selectedUser!.copyWith(
-        name: nameController.text.trim(),
         imagePath: _selectedImage?.path,
       );
 
@@ -149,20 +153,25 @@ class UserViewModel extends ChangeNotifier {
         notifyListeners();
         return true;
       } else {
-        _setError('Failed to update user');
+        _setError('Failed to update user image');
         return false;
       }
     } catch (e) {
-      _setError('Error updating user: ${e.toString()}');
+      _setError('Error updating user image: ${e.toString()}');
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  Future<bool> deleteUser() async {
+  Future<bool> deleteUserImage() async {
     if (_selectedUser == null) {
       _setError('No user selected');
+      return false;
+    }
+
+    if (_selectedUser!.imagePath == null) {
+      _setError('No image to delete');
       return false;
     }
 
@@ -170,35 +179,34 @@ class UserViewModel extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      final success = _userService.deleteUser(_selectedUser!.id);
+      // Delete the image file if it exists
+      if (_selectedUser!.imagePath != null) {
+        final imageFile = File(_selectedUser!.imagePath!);
+        if (await imageFile.exists()) {
+          try {
+            await imageFile.delete();
+          } catch (e) {
+            // Continue even if file deletion fails
+          }
+        }
+      }
+
+      final updatedUser = _selectedUser!.copyWith(imagePath: null);
+
+      final success = _userService.updateUser(updatedUser);
       if (success) {
+        _selectedUser = updatedUser;
+        _selectedImage = null;
         _users = _userService.getAllUsers();
         _filteredUsers = _userService.searchUsers(_searchQuery);
-
-        // Select next available user
-        if (_users.isNotEmpty) {
-          _currentUserIndex =
-              _currentUserIndex >= _users.length
-                  ? _users.length - 1
-                  : _currentUserIndex;
-          _selectedUser = _users[_currentUserIndex];
-          nameController.text = _selectedUser!.name;
-          _loadUserImage();
-        } else {
-          _selectedUser = null;
-          _selectedImage = null;
-          _currentUserIndex = 0;
-          nameController.clear();
-        }
-
         notifyListeners();
         return true;
       } else {
-        _setError('Failed to delete user');
+        _setError('Failed to delete user image');
         return false;
       }
     } catch (e) {
-      _setError('Error deleting user: ${e.toString()}');
+      _setError('Error deleting user image: ${e.toString()}');
       return false;
     } finally {
       _setLoading(false);

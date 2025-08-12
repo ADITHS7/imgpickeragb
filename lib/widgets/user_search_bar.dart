@@ -1,3 +1,4 @@
+// widgets/user_search_bar.dart
 import 'package:flutter/material.dart';
 import 'package:imgpickapp/viewmodel/user_viewmodel.dart';
 import 'package:provider/provider.dart';

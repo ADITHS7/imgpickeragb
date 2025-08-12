@@ -1,3 +1,4 @@
+// widgets/action_buttons.dart
 import 'package:flutter/material.dart';
 import 'package:imgpickapp/viewmodel/user_viewmodel.dart';
 import 'package:provider/provider.dart';
@@ -9,17 +10,17 @@ class ActionButtons extends StatelessWidget {
       builder: (context, viewModel, child) {
         return Column(
           children: [
-            // Update and Delete Buttons
+            // Update Image and Delete Image Buttons
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed:
-                        viewModel.isLoading
+                        (viewModel.isLoading || viewModel.selectedImage == null)
                             ? null
-                            : () => _handleUpdate(context, viewModel),
+                            : () => _handleUpdateImage(context, viewModel),
                     icon: Icon(Icons.save),
-                    label: Text('Update'),
+                    label: Text('Update Image'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blue,
                       foregroundColor: Colors.white,
@@ -31,11 +32,12 @@ class ActionButtons extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed:
-                        viewModel.isLoading
+                        (viewModel.isLoading ||
+                                viewModel.selectedUser?.imagePath == null)
                             ? null
-                            : () => _handleDelete(context, viewModel),
+                            : () => _handleDeleteImage(context, viewModel),
                     icon: Icon(Icons.delete),
-                    label: Text('Delete'),
+                    label: Text('Delete Image'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
                       foregroundColor: Colors.white,
@@ -89,23 +91,33 @@ class ActionButtons extends StatelessWidget {
     );
   }
 
-  void _handleUpdate(BuildContext context, UserViewModel viewModel) async {
-    final success = await viewModel.updateUser();
+  void _handleUpdateImage(BuildContext context, UserViewModel viewModel) async {
+    final success = await viewModel.updateUserImage();
     if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('User updated successfully!')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Image updated successfully! (150x150px JPEG)'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else if (viewModel.errorMessage.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.errorMessage),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
-  void _handleDelete(BuildContext context, UserViewModel viewModel) {
+  void _handleDeleteImage(BuildContext context, UserViewModel viewModel) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Delete User'),
+          title: Text('Delete Image'),
           content: Text(
-            'Are you sure you want to delete ${viewModel.selectedUser!.name}?',
+            'Are you sure you want to delete the image for ${viewModel.selectedUser!.name}?',
           ),
           actions: [
             TextButton(
@@ -116,10 +128,20 @@ class ActionButtons extends StatelessWidget {
               child: Text('Delete'),
               onPressed: () async {
                 Navigator.of(context).pop();
-                final success = await viewModel.deleteUser();
+                final success = await viewModel.deleteUserImage();
                 if (success) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('User deleted successfully!')),
+                    SnackBar(
+                      content: Text('Image deleted successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else if (viewModel.errorMessage.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(viewModel.errorMessage),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               },
