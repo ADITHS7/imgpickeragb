@@ -108,7 +108,7 @@ class UserViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Filter users by search query with API integration
+  // Filter users by search query with API integration - FIXED
   Future<void> filterUsers(String query) async {
     _searchQuery = query;
 
@@ -122,9 +122,43 @@ class UserViewModel extends ChangeNotifier {
       _clearError();
 
       if (query.trim().isEmpty) {
+        // Reset to show all users
         _filteredUsers = List.from(_users);
+        // Restore selected user if it was previously selected
+        if (_selectedUser != null) {
+          _currentUserIndex = _users.indexWhere(
+            (u) => u.soccode == _selectedUser!.soccode,
+          );
+          if (_currentUserIndex == -1) _currentUserIndex = 0;
+        }
       } else {
+        // Perform search
         _filteredUsers = await _userService.searchUsers(query);
+
+        // Check if current selected user is in filtered results
+        if (_selectedUser != null) {
+          final isSelectedUserInResults = _filteredUsers.any(
+            (user) => user.soccode == _selectedUser!.soccode,
+          );
+
+          if (!isSelectedUserInResults) {
+            // Clear selection if current user not in results
+            _selectedUser = null;
+            _selectedImage = null;
+            _currentUserIndex = 0;
+            nameController.clear();
+          } else {
+            // Update current user index based on filtered results
+            _currentUserIndex = _filteredUsers.indexWhere(
+              (u) => u.soccode == _selectedUser!.soccode,
+            );
+          }
+        }
+
+        // If no user is selected and we have results, select first one
+        if (_selectedUser == null && _filteredUsers.isNotEmpty) {
+          await selectUser(_filteredUsers[0]);
+        }
       }
 
       notifyListeners();
@@ -143,8 +177,10 @@ class UserViewModel extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      // Find index in full users list
-      _currentUserIndex = _users.indexWhere((u) => u.soccode == user.soccode);
+      // Find index in current filtered list
+      _currentUserIndex = _filteredUsers.indexWhere(
+        (u) => u.soccode == user.soccode,
+      );
       if (_currentUserIndex == -1) _currentUserIndex = 0;
 
       // Load fresh user details from API
@@ -164,8 +200,10 @@ class UserViewModel extends ChangeNotifier {
   }
 
   Future<void> _selectUserByIndex(int index) async {
-    if (index >= 0 && index < _users.length) {
-      await selectUser(_users[index]);
+    // Use filtered users for navigation when searching
+    final userList = _searchQuery.isEmpty ? _users : _filteredUsers;
+    if (index >= 0 && index < userList.length) {
+      await selectUser(userList[index]);
     }
   }
 
@@ -240,29 +278,27 @@ class UserViewModel extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      // Upload image via API
+      // Upload image via UserService
       final result = await _userService.uploadImage(
         _selectedUser!.soccode,
         _selectedImage!,
       );
 
       if (result['success'] == true) {
-        // Refresh user data from API to get updated status
-        final updatedUser = await _userService.refreshUser(
-          _selectedUser!.soccode,
-        );
-        if (updatedUser != null) {
+        // Update user in both lists
+        if (result['user'] != null) {
+          final updatedUser = User.fromJson(result['user']);
           _selectedUser = updatedUser;
 
-          // Update in users list
-          final index = _users.indexWhere(
+          // Update in main users list
+          final mainIndex = _users.indexWhere(
             (u) => u.soccode == _selectedUser!.soccode,
           );
-          if (index != -1) {
-            _users[index] = updatedUser;
+          if (mainIndex != -1) {
+            _users[mainIndex] = updatedUser;
           }
 
-          // Update filtered list
+          // Update in filtered list
           final filteredIndex = _filteredUsers.indexWhere(
             (u) => u.soccode == _selectedUser!.soccode,
           );
@@ -308,26 +344,24 @@ class UserViewModel extends ChangeNotifier {
       _setLoading(true);
       _clearError();
 
-      // Delete image via API
+      // Delete image via UserService
       final result = await _userService.deleteImage(_selectedUser!.soccode);
 
       if (result['success'] == true) {
-        // Refresh user data from API to get updated status
-        final updatedUser = await _userService.refreshUser(
-          _selectedUser!.soccode,
-        );
-        if (updatedUser != null) {
+        // Update user in both lists
+        if (result['user'] != null) {
+          final updatedUser = User.fromJson(result['user']);
           _selectedUser = updatedUser;
 
-          // Update in users list
-          final index = _users.indexWhere(
+          // Update in main users list
+          final mainIndex = _users.indexWhere(
             (u) => u.soccode == _selectedUser!.soccode,
           );
-          if (index != -1) {
-            _users[index] = updatedUser;
+          if (mainIndex != -1) {
+            _users[mainIndex] = updatedUser;
           }
 
-          // Update filtered list
+          // Update in filtered list
           final filteredIndex = _filteredUsers.indexWhere(
             (u) => u.soccode == _selectedUser!.soccode,
           );
@@ -351,17 +385,37 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
-  // Navigation methods
+  // Navigation methods - FIXED for search context
   Future<void> nextUser() async {
-    if (canGoNext) {
+    final userList = _searchQuery.isEmpty ? _users : _filteredUsers;
+    if (_currentUserIndex < userList.length - 1) {
       await _selectUserByIndex(_currentUserIndex + 1);
     }
   }
 
   Future<void> previousUser() async {
-    if (canGoPrevious) {
+    final userList = _searchQuery.isEmpty ? _users : _filteredUsers;
+    if (_currentUserIndex > 0) {
       await _selectUserByIndex(_currentUserIndex - 1);
     }
+  }
+
+  // Updated navigation getters for search context
+  bool get canGoNextInContext {
+    final userList = _searchQuery.isEmpty ? _users : _filteredUsers;
+    return userList.isNotEmpty && _currentUserIndex < userList.length - 1;
+  }
+
+  bool get canGoPreviousInContext {
+    final userList = _searchQuery.isEmpty ? _users : _filteredUsers;
+    return userList.isNotEmpty && _currentUserIndex > 0;
+  }
+
+  // Get current context info
+  String get currentContextInfo {
+    final userList = _searchQuery.isEmpty ? _users : _filteredUsers;
+    if (userList.isEmpty) return '0/0';
+    return '${_currentUserIndex + 1}/${userList.length}';
   }
 
   // Refresh all data from API
@@ -383,11 +437,16 @@ class UserViewModel extends ChangeNotifier {
       _userService.clearCache();
       await _loadUsersFromApi();
 
-      // Refresh current user if selected
-      if (_selectedUser != null) {
-        await selectUser(_selectedUser!);
-      } else if (_users.isNotEmpty) {
-        await _selectUserByIndex(0);
+      // Re-apply current search if any
+      if (_searchQuery.isNotEmpty) {
+        await filterUsers(_searchQuery);
+      } else {
+        // Refresh current user if selected
+        if (_selectedUser != null) {
+          await selectUser(_selectedUser!);
+        } else if (_users.isNotEmpty) {
+          await _selectUserByIndex(0);
+        }
       }
 
       _clearError();
@@ -427,7 +486,7 @@ class UserViewModel extends ChangeNotifier {
       if (_isApiConnected) {
         _clearError();
       } else {
-        _setError('API server is not reachable');
+        _setError(healthCheck['message'] ?? 'API server is not reachable');
       }
       notifyListeners();
     } catch (e) {
@@ -467,6 +526,7 @@ class UserViewModel extends ChangeNotifier {
   void dispose() {
     searchController.dispose();
     nameController.dispose();
+    _userService.dispose();
     super.dispose();
   }
 }

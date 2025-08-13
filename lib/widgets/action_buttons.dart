@@ -49,31 +49,31 @@ class ActionButtons extends StatelessWidget {
                     ),
                   ),
                 ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed:
-                        (viewModel.isLoading ||
-                                viewModel.selectedUser?.hasImage != true ||
-                                !viewModel.isApiConnected)
-                            ? null
-                            : () => _handleDeleteImage(context, viewModel),
-                    icon: Icon(Icons.delete_outline, size: 20),
-                    label: Text(
-                      'Delete Image',
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red[600],
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 2,
-                    ),
-                  ),
-                ),
+                // SizedBox(width: 12),
+                // Expanded(
+                //   child: ElevatedButton.icon(
+                //     onPressed:
+                //         (viewModel.isLoading ||
+                //                 viewModel.selectedUser?.hasImage != true ||
+                //                 !viewModel.isApiConnected)
+                //             ? null
+                //             : () => _handleDeleteImage(context, viewModel),
+                //     icon: Icon(Icons.delete_outline, size: 20),
+                //     label: Text(
+                //       'Delete Image',
+                //       style: TextStyle(fontWeight: FontWeight.w600),
+                //     ),
+                //     style: ElevatedButton.styleFrom(
+                //       backgroundColor: Colors.red[600],
+                //       foregroundColor: Colors.white,
+                //       padding: EdgeInsets.symmetric(vertical: 14),
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.circular(8),
+                //       ),
+                //       elevation: 2,
+                //     ),
+                //   ),
+                // ),
               ],
             ),
             SizedBox(height: 16),
@@ -196,7 +196,7 @@ class ActionButtons extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  '• Image will be resized to 150×150px\n• Format: JPEG\n• Stored on server',
+                  '• Image will be resized to 150×150px\n• Format: JPG\n• Stored on server',
                   style: TextStyle(fontSize: 12, color: Colors.blue[800]),
                 ),
               ),
@@ -234,7 +234,7 @@ class ActionButtons extends StatelessWidget {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Image uploaded successfully! (150×150px JPEG)',
+                    'Image uploaded successfully! (150×150px JPG)',
                     style: TextStyle(fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -270,104 +270,104 @@ class ActionButtons extends StatelessWidget {
     }
   }
 
-  void _handleDeleteImage(BuildContext context, UserViewModel viewModel) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          title: Row(
-            children: [
-              Icon(Icons.delete_outline, color: Colors.red[600]),
-              SizedBox(width: 8),
-              Text('Delete Image'),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Are you sure you want to delete the image for ${viewModel.selectedUser!.societyname}?',
-                style: TextStyle(fontSize: 16),
-              ),
-              SizedBox(height: 12),
-              Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  'This action cannot be undone. The image will be permanently removed from the server.',
-                  style: TextStyle(fontSize: 12, color: Colors.red[800]),
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red[600],
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: Text('Delete'),
-              onPressed: () async {
-                Navigator.of(context).pop();
-                final success = await viewModel.deleteUserImage();
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          SizedBox(width: 8),
-                          Text('Image deleted successfully!'),
-                        ],
-                      ),
-                      backgroundColor: Colors.green[600],
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  );
-                } else if (viewModel.errorMessage.isNotEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Row(
-                        children: [
-                          Icon(Icons.error, color: Colors.white, size: 20),
-                          SizedBox(width: 8),
-                          Expanded(child: Text(viewModel.errorMessage)),
-                        ],
-                      ),
-                      backgroundColor: Colors.red[600],
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  );
-                }
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
+  // void _handleDeleteImage(BuildContext context, UserViewModel viewModel) {
+  //   showDialog(
+  //     context: context,
+  //     builder: (BuildContext context) {
+  //       return AlertDialog(
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(12),
+  //         ),
+  //         title: Row(
+  //           children: [
+  //             Icon(Icons.delete_outline, color: Colors.red[600]),
+  //             SizedBox(width: 8),
+  //             Text('Delete Image'),
+  //           ],
+  //         ),
+  //         content: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Text(
+  //               'Are you sure you want to delete the image for ${viewModel.selectedUser!.societyname}?',
+  //               style: TextStyle(fontSize: 16),
+  //             ),
+  //             SizedBox(height: 12),
+  //             Container(
+  //               padding: EdgeInsets.all(8),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.red[50],
+  //                 borderRadius: BorderRadius.circular(6),
+  //               ),
+  //               child: Text(
+  //                 'This action cannot be undone. The image will be permanently removed from the server.',
+  //                 style: TextStyle(fontSize: 12, color: Colors.red[800]),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
+  //             onPressed: () => Navigator.of(context).pop(),
+  //           ),
+  //           ElevatedButton(
+  //             style: ElevatedButton.styleFrom(
+  //               backgroundColor: Colors.red[600],
+  //               foregroundColor: Colors.white,
+  //               shape: RoundedRectangleBorder(
+  //                 borderRadius: BorderRadius.circular(8),
+  //               ),
+  //             ),
+  //             child: Text('Delete'),
+  //             onPressed: () async {
+  //               Navigator.of(context).pop();
+  //               final success = await viewModel.deleteUserImage();
+  //               if (success) {
+  //                 ScaffoldMessenger.of(context).showSnackBar(
+  //                   SnackBar(
+  //                     content: Row(
+  //                       children: [
+  //                         Icon(
+  //                           Icons.check_circle,
+  //                           color: Colors.white,
+  //                           size: 20,
+  //                         ),
+  //                         SizedBox(width: 8),
+  //                         Text('Image deleted successfully!'),
+  //                       ],
+  //                     ),
+  //                     backgroundColor: Colors.green[600],
+  //                     behavior: SnackBarBehavior.floating,
+  //                     shape: RoundedRectangleBorder(
+  //                       borderRadius: BorderRadius.circular(8),
+  //                     ),
+  //                   ),
+  //                 );
+  //               } else if (viewModel.errorMessage.isNotEmpty) {
+  //                 ScaffoldMessenger.of(context).showSnackBar(
+  //                   SnackBar(
+  //                     content: Row(
+  //                       children: [
+  //                         Icon(Icons.error, color: Colors.white, size: 20),
+  //                         SizedBox(width: 8),
+  //                         Expanded(child: Text(viewModel.errorMessage)),
+  //                       ],
+  //                     ),
+  //                     backgroundColor: Colors.red[600],
+  //                     behavior: SnackBarBehavior.floating,
+  //                     shape: RoundedRectangleBorder(
+  //                       borderRadius: BorderRadius.circular(8),
+  //                     ),
+  //                   ),
+  //                 );
+  //               }
+  //             },
+  //           ),
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 }

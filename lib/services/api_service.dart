@@ -1,10 +1,10 @@
 // services/api_service.dart
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:imgpickapp/env.dart';
 import '../model/user_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.101.24:3000/api';
   static late Dio _dio;
 
   // Initialize Dio
