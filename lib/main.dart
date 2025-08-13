@@ -15,6 +15,7 @@ class MyApp extends StatelessWidget {
       create: (context) => UserViewModel(),
       child: MaterialApp(
         title: 'User Management App',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
           primarySwatch: Colors.blue,
           visualDensity: VisualDensity.adaptivePlatformDensity,

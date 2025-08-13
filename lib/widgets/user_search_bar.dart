@@ -1,7 +1,7 @@
 // widgets/user_search_bar.dart
 import 'package:flutter/material.dart';
-import 'package:imgpickapp/viewmodel/user_viewmodel.dart';
 import 'package:provider/provider.dart';
+import '../viewmodel/user_viewmodel.dart';
 
 class UserSearchBar extends StatefulWidget {
   @override
@@ -22,11 +22,13 @@ class _UserSearchBarState extends State<UserSearchBar> {
     return Consumer<UserViewModel>(
       builder: (context, viewModel, child) {
         return Container(
+          margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 4,
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 8,
                 offset: Offset(0, 2),
               ),
             ],
@@ -41,67 +43,73 @@ class _UserSearchBarState extends State<UserSearchBar> {
                 padding: EdgeInsets.all(12),
                 child: Icon(
                   Icons.search,
-                  color: viewModel.isLoading ? Colors.blue : Colors.grey[600],
+                  color:
+                      viewModel.isLoading ? Colors.blue[600] : Colors.grey[500],
+                  size: 22,
                 ),
               ),
               suffixIcon: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Loading indicator
                   if (viewModel.isLoading)
                     Container(
                       padding: EdgeInsets.all(12),
                       child: SizedBox(
-                        width: 16,
-                        height: 16,
+                        width: 18,
+                        height: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.blue,
+                            Colors.blue[600]!,
                           ),
                         ),
                       ),
                     ),
-
-                  // Clear button
                   if (viewModel.searchController.text.isNotEmpty &&
                       !viewModel.isLoading)
                     IconButton(
-                      icon: Icon(Icons.clear, color: Colors.grey[600]),
+                      icon: Icon(
+                        Icons.clear,
+                        color: Colors.grey[500],
+                        size: 20,
+                      ),
                       onPressed: () {
                         viewModel.searchController.clear();
                         viewModel.filterUsers('');
                         _focusNode.unfocus();
                       },
                     ),
-
-                  // API status indicator
                   Container(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(
-                      viewModel.isApiConnected
-                          ? Icons.cloud_done
-                          : Icons.cloud_off,
-                      size: 16,
-                      color:
-                          viewModel.isApiConnected
-                              ? Colors.green[600]
-                              : Colors.red[600],
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color:
+                            viewModel.isApiConnected
+                                ? Colors.green[500]
+                                : Colors.red[500],
+                        shape: BoxShape.circle,
+                      ),
                     ),
                   ),
                 ],
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[200]!, width: 1),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey[200]!, width: 1),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.blue, width: 2),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.blue[600]!, width: 2),
+              ),
+              errorBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.red[400]!, width: 1),
               ),
               filled: true,
               fillColor: Colors.white,
@@ -112,8 +120,7 @@ class _UserSearchBarState extends State<UserSearchBar> {
             ),
             style: TextStyle(fontSize: 16, color: Colors.grey[800]),
             onChanged: (value) {
-              // Debounce search to avoid too many API calls
-              Future.delayed(Duration(milliseconds: 500), () {
+              Future.delayed(Duration(milliseconds: 300), () {
                 if (viewModel.searchController.text == value) {
                   viewModel.filterUsers(value);
                 }
