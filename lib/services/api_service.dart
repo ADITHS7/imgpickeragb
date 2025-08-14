@@ -1,4 +1,4 @@
-// services/api_service.dart
+// services/api_service.dart - UPDATED to include user_id
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:imgpickapp/env.dart';
@@ -132,8 +132,12 @@ class ApiService {
     }
   }
 
-  // Upload image for a society
-  static Future<bool> uploadImage(String soccode, File imageFile) async {
+  // Upload image for a society - UPDATED to include user_id
+  static Future<bool> uploadImage(
+    String soccode,
+    File imageFile,
+    String userId, // Added user_id parameter
+  ) async {
     try {
       String fileName = imageFile.path.split('/').last;
 
@@ -142,6 +146,7 @@ class ApiService {
           imageFile.path,
           filename: fileName,
         ),
+        'user_id': userId, // Include user_id in the form data
       });
 
       final response = await dio.post(
@@ -159,10 +164,16 @@ class ApiService {
     }
   }
 
-  // Delete image for a society
-  static Future<bool> deleteImage(String soccode) async {
+  // Delete image for a society - UPDATED to include user_id
+  static Future<bool> deleteImage(String soccode, String userId) async {
     try {
-      final response = await dio.delete('/societies/$soccode/image');
+      final response = await dio.delete(
+        '/societies/$soccode/image',
+        data: {
+          'user_id': userId, // Include user_id in the request body
+        },
+        options: Options(headers: {'Content-Type': 'application/json'}),
+      );
       final data = _handleResponse(response);
       return data['success'] == true;
     } on DioException catch (e) {

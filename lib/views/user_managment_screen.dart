@@ -33,34 +33,60 @@ class UserManagementScreen extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
+                        // App Logo/Image Container
                         Container(
-                          padding: EdgeInsets.all(16),
+                          width: 120,
+                          height: 80,
+                          padding: EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.blue[50],
-                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.black.withOpacity(
+                                0.05,
+                              ), // Milma brand color
+                              width: 2,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Color(0xFF8B2635).withOpacity(0.15),
+                                blurRadius: 8,
+                                offset: Offset(0, 3),
+                              ),
+                            ],
                           ),
-                          child: Icon(
-                            Icons.people,
-                            size: 32,
-                            color: Colors.blue[600],
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.asset(
+                              'assets/logo.png', // Your Milma logo
+                              fit: BoxFit.contain, // Preserve logo proportions
+                              errorBuilder: (context, error, stackTrace) {
+                                // Fallback to icon if image fails to load
+                                return Icon(
+                                  Icons.agriculture,
+                                  size: 36,
+                                  color: Colors.black.withOpacity(0.05),
+                                );
+                              },
+                            ),
                           ),
                         ),
                         SizedBox(height: 16),
                         Text(
-                          'AGB Photo App',
+                          'Milma Photo App',
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.w700,
-                            color: Colors.grey[800],
+                            color: Colors.black, // Milma brand color
                           ),
                         ),
                         SizedBox(height: 8),
                         Text(
-                          'Manage user profiles and images',
+                          'Society President Photo Management',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey[600],
-                            fontWeight: FontWeight.w400,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
