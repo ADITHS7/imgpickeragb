@@ -122,40 +122,40 @@ class ImageSection extends StatelessWidget {
                       ),
                     ),
                     SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed:
-                            viewModel.isLoading
-                                ? null
-                                : () => _handleGalleryPick(context, viewModel),
-                        icon:
-                            viewModel.isLoading
-                                ? SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                )
-                                : Icon(Icons.photo_library_outlined, size: 20),
-                        label: Text(
-                          'Gallery',
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange[600],
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          elevation: 0,
-                        ),
-                      ),
-                    ),
+                    // Expanded(
+                    //   child: ElevatedButton.icon(
+                    //     onPressed:
+                    //         viewModel.isLoading
+                    //             ? null
+                    //             : () => _handleGalleryPick(context, viewModel),
+                    //     icon:
+                    //         viewModel.isLoading
+                    //             ? SizedBox(
+                    //               width: 16,
+                    //               height: 16,
+                    //               child: CircularProgressIndicator(
+                    //                 strokeWidth: 2,
+                    //                 valueColor: AlwaysStoppedAnimation<Color>(
+                    //                   Colors.white,
+                    //                 ),
+                    //               ),
+                    //             )
+                    //             : Icon(Icons.photo_library_outlined, size: 20),
+                    //     label: Text(
+                    //       'Gallery',
+                    //       style: TextStyle(fontWeight: FontWeight.w600),
+                    //     ),
+                    //     style: ElevatedButton.styleFrom(
+                    //       backgroundColor: Colors.orange[600],
+                    //       foregroundColor: Colors.white,
+                    //       padding: EdgeInsets.symmetric(vertical: 14),
+                    //       shape: RoundedRectangleBorder(
+                    //         borderRadius: BorderRadius.circular(10),
+                    //       ),
+                    //       elevation: 0,
+                    //     ),
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
@@ -382,7 +382,7 @@ class ImageSection extends StatelessWidget {
           ),
           SizedBox(height: 2),
           Text(
-            'Use Camera/Gallery',
+            'Use Camera',
             style: TextStyle(fontSize: 8, color: Colors.red[600]),
             textAlign: TextAlign.center,
           ),
@@ -427,7 +427,7 @@ class ImageSection extends StatelessWidget {
           ),
           SizedBox(height: 2),
           Text(
-            'Add with Camera/Gallery',
+            'Add with Camera',
             style: TextStyle(fontSize: 8, color: Colors.orange[600]),
             textAlign: TextAlign.center,
           ),
@@ -472,7 +472,7 @@ class ImageSection extends StatelessWidget {
           ),
           SizedBox(height: 2),
           Text(
-            'Tap Camera/Gallery',
+            'Tap Camera',
             style: TextStyle(fontSize: 9, color: Colors.blue[600]),
             textAlign: TextAlign.center,
           ),

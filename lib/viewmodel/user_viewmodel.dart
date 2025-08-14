@@ -1,5 +1,6 @@
-// viewmodel/user_viewmodel.dart
+// viewmodel/user_viewmodel.dart - UPDATED with Storage Integration
 import 'package:flutter/material.dart';
+import 'package:imgpickapp/login/service/storage_service.dart';
 import 'package:imgpickapp/services/image_services.dart';
 import 'dart:io';
 import '../model/user_model.dart';
@@ -8,6 +9,7 @@ import '../services/user_service.dart';
 class UserViewModel extends ChangeNotifier {
   final UserService _userService = UserService();
   final ImageService _imageService = ImageService();
+  final StorageService _storageService = StorageService(); // Add this
 
   // Private state
   List<User> _users = [];
@@ -20,6 +22,7 @@ class UserViewModel extends ChangeNotifier {
   String _searchQuery = '';
   bool _isApiConnected = false;
   bool _isInitialized = false;
+  String? _currentUserId; // Add this to store current user ID
 
   // Controllers
   final TextEditingController searchController = TextEditingController();
@@ -40,6 +43,7 @@ class UserViewModel extends ChangeNotifier {
   int get totalUsers => _users.length;
   bool get isApiConnected => _isApiConnected;
   bool get isInitialized => _isInitialized;
+  String? get currentUserId => _currentUserId; // Add this getter
 
   UserViewModel() {
     _initializeUsers();
@@ -50,6 +54,9 @@ class UserViewModel extends ChangeNotifier {
 
     _setLoading(true);
     try {
+      // Load current user ID from storage
+      await _loadCurrentUserId();
+
       // Check API connection first
       final healthCheck = await _userService.checkApiHealth();
       _isApiConnected = healthCheck['success'] == true;
@@ -83,6 +90,93 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
+  // Add this method to load current user ID from storage
+  Future<void> _loadCurrentUserId() async {
+    try {
+      final user = await _storageService.getUser();
+      _currentUserId = user?.id?.toString();
+      print('Loaded user ID from storage: $_currentUserId');
+    } catch (e) {
+      print('Error loading user ID from storage: $e');
+      _currentUserId = null;
+    }
+  }
+
+  // Update user image via API with user_id from storage
+  Future<bool> updateUserImage() async {
+    if (_selectedUser == null) {
+      _setError('No society selected');
+      return false;
+    }
+
+    if (_selectedImage == null) {
+      _setError('No image selected to upload');
+      return false;
+    }
+
+    if (!_isApiConnected) {
+      _setError('API connection required for upload');
+      return false;
+    }
+
+    if (_currentUserId == null) {
+      _setError('User not logged in. Please log in again.');
+      return false;
+    }
+
+    try {
+      _setLoading(true);
+      _clearError();
+
+      // Upload image via UserService with user_id
+      final result = await _userService.uploadImage(
+        _selectedUser!.soccode,
+        _selectedImage!,
+        _currentUserId!, // Pass the user_id from storage
+      );
+
+      if (result['success'] == true) {
+        // Update user in both lists
+        if (result['user'] != null) {
+          final updatedUser = User.fromJson(result['user']);
+          _selectedUser = updatedUser;
+
+          // Update in main users list
+          final mainIndex = _users.indexWhere(
+            (u) => u.soccode == _selectedUser!.soccode,
+          );
+          if (mainIndex != -1) {
+            _users[mainIndex] = updatedUser;
+          }
+
+          // Update in filtered list
+          final filteredIndex = _filteredUsers.indexWhere(
+            (u) => u.soccode == _selectedUser!.soccode,
+          );
+          if (filteredIndex != -1) {
+            _filteredUsers[filteredIndex] = updatedUser;
+          }
+        }
+
+        // Clear selected image after successful upload
+        _selectedImage = null;
+        notifyListeners();
+        return true;
+      } else {
+        _setError(result['error'] ?? 'Failed to upload image to server');
+        return false;
+      }
+    } catch (e) {
+      _setError('Error uploading image: ${e.toString()}');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Rest of your existing methods remain the same...
+  // (filterUsers, selectUser, _loadUsersFromApi, etc.)
+
   Future<void> _loadUsersFromApi() async {
     try {
       _users = await _userService.getAllUsers();
@@ -108,7 +202,7 @@ class UserViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Filter users by search query with API integration - FIXED
+  // Filter users by search query with API integration
   Future<void> filterUsers(String query) async {
     _searchQuery = query;
 
@@ -257,72 +351,6 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
-  // Update user image via API
-  Future<bool> updateUserImage() async {
-    if (_selectedUser == null) {
-      _setError('No society selected');
-      return false;
-    }
-
-    if (_selectedImage == null) {
-      _setError('No image selected to upload');
-      return false;
-    }
-
-    if (!_isApiConnected) {
-      _setError('API connection required for upload');
-      return false;
-    }
-
-    try {
-      _setLoading(true);
-      _clearError();
-
-      // Upload image via UserService
-      final result = await _userService.uploadImage(
-        _selectedUser!.soccode,
-        _selectedImage!,
-      );
-
-      if (result['success'] == true) {
-        // Update user in both lists
-        if (result['user'] != null) {
-          final updatedUser = User.fromJson(result['user']);
-          _selectedUser = updatedUser;
-
-          // Update in main users list
-          final mainIndex = _users.indexWhere(
-            (u) => u.soccode == _selectedUser!.soccode,
-          );
-          if (mainIndex != -1) {
-            _users[mainIndex] = updatedUser;
-          }
-
-          // Update in filtered list
-          final filteredIndex = _filteredUsers.indexWhere(
-            (u) => u.soccode == _selectedUser!.soccode,
-          );
-          if (filteredIndex != -1) {
-            _filteredUsers[filteredIndex] = updatedUser;
-          }
-        }
-
-        // Clear selected image after successful upload
-        _selectedImage = null;
-        notifyListeners();
-        return true;
-      } else {
-        _setError(result['error'] ?? 'Failed to upload image to server');
-        return false;
-      }
-    } catch (e) {
-      _setError('Error uploading image: ${e.toString()}');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
   // Delete user image via API
   Future<bool> deleteUserImage() async {
     if (_selectedUser == null) {
@@ -340,12 +368,20 @@ class UserViewModel extends ChangeNotifier {
       return false;
     }
 
+    if (_currentUserId == null) {
+      _setError('User not logged in. Please log in again.');
+      return false;
+    }
+
     try {
       _setLoading(true);
       _clearError();
 
-      // Delete image via UserService
-      final result = await _userService.deleteImage(_selectedUser!.soccode);
+      // Delete image via UserService with user_id
+      final result = await _userService.deleteImage(
+        _selectedUser!.soccode,
+        _currentUserId!, // Pass the user_id from storage
+      );
 
       if (result['success'] == true) {
         // Update user in both lists
@@ -385,7 +421,7 @@ class UserViewModel extends ChangeNotifier {
     }
   }
 
-  // Navigation methods - FIXED for search context
+  // Navigation methods
   Future<void> nextUser() async {
     final userList = _searchQuery.isEmpty ? _users : _filteredUsers;
     if (_currentUserIndex < userList.length - 1) {
@@ -423,6 +459,9 @@ class UserViewModel extends ChangeNotifier {
     try {
       _setLoading(true);
       _clearError();
+
+      // Reload current user ID from storage
+      await _loadCurrentUserId();
 
       // Check API connection
       final healthCheck = await _userService.checkApiHealth();
@@ -508,6 +547,7 @@ class UserViewModel extends ChangeNotifier {
     _searchQuery = '';
     _isApiConnected = false;
     _isInitialized = false;
+    _currentUserId = null; // Reset user ID too
 
     searchController.clear();
     nameController.clear();

@@ -1,4 +1,4 @@
-// services/user_service.dart
+// services/user_service.dart - UPDATED to include user_id
 import 'dart:io';
 import '../model/user_model.dart';
 import 'api_service.dart';
@@ -162,17 +162,18 @@ class UserService {
     }
   }
 
-  // Upload image with enhanced error handling and proper response handling
+  // Upload image with enhanced error handling and user_id support - UPDATED
   Future<Map<String, dynamic>> uploadImage(
     String soccode,
     File imageFile,
+    String userId, // Added user_id parameter
   ) async {
     try {
       if (!await imageFile.exists()) {
         return {'success': false, 'error': 'Image file does not exist'};
       }
 
-      final success = await ApiService.uploadImage(soccode, imageFile);
+      final success = await ApiService.uploadImage(soccode, imageFile, userId);
 
       if (success) {
         // Refresh user data to get updated status
@@ -190,10 +191,13 @@ class UserService {
     }
   }
 
-  // Delete image with enhanced error handling
-  Future<Map<String, dynamic>> deleteImage(String soccode) async {
+  // Delete image with enhanced error handling and user_id support - UPDATED
+  Future<Map<String, dynamic>> deleteImage(
+    String soccode,
+    String userId, // Added user_id parameter
+  ) async {
     try {
-      final success = await ApiService.deleteImage(soccode);
+      final success = await ApiService.deleteImage(soccode, userId);
 
       if (success) {
         // Refresh user data to get updated status
@@ -412,10 +416,10 @@ class UserService {
   // Legacy methods for backward compatibility
   int get userCount => _cachedUsers?.length ?? 0;
 
-  @Deprecated('Use deleteImage(String soccode) instead')
+  @Deprecated('Use deleteImage(String soccode, String userId) instead')
   bool deleteUser(int userId) {
     print(
-      'deleteUser(int) is deprecated. Use deleteImage(String soccode) instead.',
+      'deleteUser(int) is deprecated. Use deleteImage(String soccode, String userId) instead.',
     );
     return false;
   }
